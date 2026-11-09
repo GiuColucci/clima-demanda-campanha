@@ -1,0 +1,115 @@
+# Premissas do projeto. Tudo aqui é editável e é apresentado no README como PREMISSA, não como medição.
+
+# Zonas fixas do Rio. Coordenadas = um ponto representativo de cada zona.
+# distancia_mar_km e altitude_m são aproximações usadas só na simulação de demanda.
+zonas:
+  zona_sul:
+    nome: "Zona Sul (Copacabana)"
+    lat: -22.9711
+    lon: -43.1822
+    distancia_mar_km: 0.3
+    altitude_m: 5
+  centro:
+    nome: "Centro"
+    lat: -22.9068
+    lon: -43.1729
+    distancia_mar_km: 1.0
+    altitude_m: 10
+  zona_norte:
+    nome: "Zona Norte (Méier)"
+    lat: -22.9020
+    lon: -43.2780
+    distancia_mar_km: 12.0
+    altitude_m: 15
+  barra:
+    nome: "Barra da Tijuca"
+    lat: -23.0004
+    lon: -43.3659
+    distancia_mar_km: 0.5
+    altitude_m: 5
+  oeste:
+    nome: "Zona Oeste (Campo Grande)"
+    lat: -22.9035
+    lon: -43.5610
+    distancia_mar_km: 25.0
+    altitude_m: 20
+
+# Gatilhos de campanha (premissas). Usam sensação térmica (apparent_temperature) e chuva.
+gatilhos:
+  calor:
+    sensacao_termica_min_c: 38
+  frio:
+    sensacao_termica_max_c: 17
+  chuva:
+    precipitacao_min_mm_h: 2
+
+# Coleta de clima
+clima:
+  fuso: "America/Sao_Paulo"
+  inicio: "2024-01-01"
+  # fim = hoje - 7 dias (o arquivo histórico da Open-Meteo tem atraso)
+  atraso_dias: 7
+  variaveis_horarias:
+    - temperature_2m
+    - apparent_temperature
+    - precipitation
+
+# ---------------- Demanda sintética (PREMISSAS, não medições) ----------------
+demanda:
+  semente: 42
+  periodos:            # hora inicial e final (inclusive) de cada período
+    manha: [6, 10]
+    almoco: [11, 14]
+    tarde: [15, 17]
+    jantar: [18, 22]
+    madrugada: [23, 5]
+  # pedidos-base por hora, por período e categoria, numa zona de volume 1.0
+  base:
+    manha:     {sopas: 5,  sorvete: 5,  bebidas: 10, comfort: 5,  cafe: 40}
+    almoco:    {sopas: 30, sorvete: 15, bebidas: 20, comfort: 30, cafe: 10}
+    tarde:     {sopas: 10, sorvete: 30, bebidas: 25, comfort: 20, cafe: 15}
+    jantar:    {sopas: 35, sorvete: 25, bebidas: 25, comfort: 45, cafe: 5}
+    madrugada: {sopas: 5,  sorvete: 10, bebidas: 15, comfort: 25, cafe: 2}
+  # multiplicador por dia da semana (0 = segunda)
+  dia_semana: [0.9, 0.9, 0.95, 1.0, 1.2, 1.3, 1.2]
+  # volume da zona e sensibilidade ao clima (k amplia ou reduz o efeito)
+  zonas:
+    zona_sul:   {volume: 1.2, k: 1.0}
+    centro:     {volume: 0.8, k: 1.0}
+    zona_norte: {volume: 1.3, k: 1.1}
+    barra:      {volume: 1.0, k: 0.9}
+    oeste:      {volume: 1.1, k: 1.2}
+  # fatores de clima "verdadeiros": 1.0 = sem efeito. Se dois gatilhos ocorrem, multiplicam.
+  fatores_clima:
+    calor: {sopas: 0.6, sorvete: 1.8, bebidas: 1.6, comfort: 0.9, cafe: 0.9}
+    frio:  {sopas: 1.7, sorvete: 0.6, bebidas: 0.7, comfort: 1.3, cafe: 1.4}
+    chuva: {sopas: 1.2, sorvete: 0.9, bebidas: 0.9, comfort: 1.5, cafe: 1.1}
+  # modelo
+  corte_treino_ate: "2025-12-31"   # treino até aqui, teste depois
+
+# ---------------- Campanha (LLM via OpenRouter) ----------------
+campanha:
+  modelo_gerador: "anthropic/claude-haiku-5.5"     # barato e rápido
+  modelo_gerador_grande: "anthropic/claude-sonnet-5.5"  # só para a comparação de custo/latência
+  modelo_juiz: "google/gemini-3.6-flash"           # outra família, para não avaliar o próprio texto
+  max_regeneracoes: 2
+  nota_minima_juiz: 4          # de 1 a 5
+  teto_gasto_usd: 2.0          # o pipeline para se passar disso
+  # preços em US$ por milhão de tokens (entrada, saída), conforme a OpenRouter em 2026-11-09
+  precos:
+    "anthropic/claude-haiku-5.5": [0.10, 0.50]
+    "anthropic/claude-sonnet-5.5": [2.00, 10.00]
+    "google/gemini-3.6-flash": [0.75, 3.75]
+  # regras determinísticas
+  regras:
+    titulo_max_chars: 50
+    corpo_max_chars: 140
+    max_emojis: 2
+    cupons_validos: ["CLIMA10"]          # cupom fictício, 10% de desconto
+    percentuais_permitidos: [10]
+    termos_proibidos: ["frete grátis", "R$", "grátis", "garantido", "100%"]
+    # palavras que NÃO podem aparecer em cada gatilho (incoerência com o clima)
+    incoerentes:
+      calor: ["sopa", "caldo", "quentinho", "esquentar", "esquenta"]
+      frio:  ["sorvete", "gelad", "refrescante", "refresca"]
+      chuva: []

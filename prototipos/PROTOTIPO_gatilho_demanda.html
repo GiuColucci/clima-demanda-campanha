@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTÓTIPO: clima → categoria destacada</title>
+<style>
+  :root { --fg:#1f2328; --mut:#6b7280; --bg:#fafaf9; --card:#fff; --line:#e5e5e0; --acc:#ea1d2c; --ok:#15803d; --warn:#b45309; }
+  * { box-sizing:border-box; }
+  body { font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif; color:var(--fg); background:var(--bg); margin:0; padding:24px 16px 64px; }
+  main { max-width:960px; margin:0 auto; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  h2 { font-size:15px; text-transform:uppercase; letter-spacing:.04em; color:var(--mut); margin:28px 0 10px; }
+  .tag { display:inline-block; background:#fee2e2; color:var(--acc); font-size:12px; padding:2px 8px; border-radius:99px; margin-bottom:8px; }
+  .q { background:var(--card); border-left:3px solid var(--acc); padding:12px 16px; border-radius:6px; color:#374151; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:16px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:760px){ .grid{grid-template-columns:1fr;} }
+  .kv { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px dashed var(--line); }
+  .kv:last-child { border-bottom:none; }
+  .kv b { font-variant-numeric:tabular-nums; }
+  button { font:inherit; border:1px solid var(--line); background:#fff; padding:6px 12px; border-radius:6px; cursor:pointer; margin:3px 4px 3px 0; }
+  button:hover { border-color:var(--acc); }
+  button.on { background:var(--acc); color:#fff; border-color:var(--acc); }
+  .tabs button { border-radius:6px 6px 0 0; margin-bottom:0; }
+  .steps button::before { content:attr(data-n) ". "; color:var(--mut); }
+  .steps button.done { background:#f3f4f6; color:var(--mut); }
+  .status { padding:10px 14px; border-radius:6px; font-weight:600; margin-bottom:12px; }
+  .status.fire { background:#fef3c7; color:var(--warn); }
+  .status.quiet { background:#f3f4f6; color:var(--mut); }
+  table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+  th, td { text-align:right; padding:6px 8px; border-bottom:1px solid var(--line); }
+  th:first-child, td:first-child { text-align:left; }
+  th { color:var(--mut); font-weight:600; font-size:13px; }
+  tr.win td { background:#dcfce7; font-weight:700; }
+  .changed { color:var(--acc); font-weight:700; }
+  .small { color:var(--mut); font-size:13px; }
+  .fbtn { padding:0 7px; margin:0 2px; }
+</style>
+</head>
+<body>
+<main>
+  <span class="tag">PROTÓTIPO DESCARTÁVEL: não é o código final</span>
+  <h1>Clima → gatilho → categoria destacada</h1>
+  <div class="q"><b>A pergunta:</b> dado o clima de uma zona do Rio numa certa hora, o gatilho disparado e a categoria destacada fazem sentido? Os <b>fatores de clima</b> (quanto cada gatilho aumenta ou diminui a demanda de cada categoria) são premissas inventadas por nós. Mexa neles e nos cenários e diga onde o resultado parece errado ("sopa em plena onda de calor?"). Em dia normal, o sistema deve ficar em silêncio.</div>
+
+  <h2>Estado atual</h2>
+  <div id="status"></div>
+  <div class="grid">
+    <div class="card" id="clima"></div>
+    <div class="card" id="resumo"></div>
+  </div>
+
+  <h2>Demanda esperada por categoria</h2>
+  <div class="card"><div id="tabela"></div>
+    <p class="small">Pedidos esperados = pedidos-base da categoria naquele período × fator de clima. "Ganho" = esperado − base. A categoria destacada é a de <b>maior ganho</b>, porque é onde um reforço de campanha rende mais.</p>
+  </div>
+
+  <h2>Jogar livremente</h2>
+  <div class="card" id="livre"></div>
+
+  <h2>Fatores de clima (premissas editáveis)</h2>
+  <div class="card"><div id="fatores"></div>
+    <p class="small">1,0 = sem efeito. Acima de 1,0 aumenta; abaixo diminui. Se calor e chuva ocorrem juntos, os fatores se multiplicam.</p>
+  </div>
+
+  <h2>Cenários guiados</h2>
+  <div class="card">
+    <div class="tabs" id="abas"></div>
+    <div id="cenario"></div>
+  </div>
+</main>
+
+<script>
+/* ===== MÓDULO PURO (liftable): sem DOM, sem botões ===== */
+const CATS = ["sopas","sorvete","bebidas","comfort","cafe"];
+const NOME_CAT = {sopas:"Sopas e caldos", sorvete:"Açaí e sorvete", bebidas:"Bebidas geladas", comfort:"Comfort food", cafe:"Café e padaria"};
+const PERIODOS = ["manha","almoco","tarde","jantar","madrugada"];
+const NOME_PER = {manha:"Manhã (6–10h)", almoco:"Almoço (11–14h)", tarde:"Tarde (15–17h)", jantar:"Jantar (18–22h)", madrugada:"Madrugada (23–5h)"};
+const ZONAS = {
+  zona_sul:{nome:"Zona Sul", k:1.0}, centro:{nome:"Centro", k:1.0}, zona_norte:{nome:"Zona Norte", k:1.1},
+  barra:{nome:"Barra da Tijuca", k:0.9}, oeste:{nome:"Zona Oeste", k:1.2}
+};
+const LIMIARES = { calor:38, frio:17, chuva:2 };          // espelha config.yaml
+const BASE = {                                             // pedidos-base (índice) por período e categoria
+  manha:    {sopas:5,  sorvete:5,  bebidas:10, comfort:5,  cafe:40},
+  almoco:   {sopas:30, sorvete:15, bebidas:20, comfort:30, cafe:10},
+  tarde:    {sopas:10, sorvete:30, bebidas:25, comfort:20, cafe:15},
+  jantar:   {sopas:35, sorvete:25, bebidas:25, comfort:45, cafe:5},
+  madrugada:{sopas:5,  sorvete:10, bebidas:15, comfort:25, cafe:2}
+};
+const FATORES_INICIAIS = {
+  calor:{sopas:0.6, sorvete:1.8, bebidas:1.6, comfort:0.9, cafe:0.9},
+  frio: {sopas:1.7, sorvete:0.6, bebidas:0.7, comfort:1.3, cafe:1.4},
+  chuva:{sopas:1.2, sorvete:0.9, bebidas:0.9, comfort:1.5, cafe:1.1}
+};
+const periodoDaHora = h => h>=6&&h<=10?"manha": h>=11&&h<=14?"almoco": h>=15&&h<=17?"tarde": h>=18&&h<=22?"jantar":"madrugada";
+
+function gatilhos(clima){
+  const g=[];
+  if (clima.sensacao >= LIMIARES.calor) g.push("calor");
+  if (clima.sensacao <= LIMIARES.frio)  g.push("frio");
+  if (clima.chuva    >= LIMIARES.chuva) g.push("chuva");
+  return g;
+}
+function simular(s){
+  const g = gatilhos(s.clima), per = periodoDaHora(s.hora), k = ZONAS[s.zona].k;
+  const linhas = CATS.map(c=>{
+    let f = 1;
+    g.forEach(t=>{ f *= 1 + (s.fatores[t][c]-1) * k; });  // k = sensibilidade da zona
+    const base = BASE[per][c], esperado = base*f;
+    return {cat:c, base, fator:f, esperado, ganho:esperado-base};
+  });
+  const venc = g.length ? linhas.reduce((a,b)=>b.ganho>a.ganho?b:a) : null;
+  return {gatilhos:g, periodo:per, linhas, destaque: venc ? venc.cat : null};
+}
+function reduzir(s, a){
+  const n = JSON.parse(JSON.stringify(s));
+  switch(a.t){
+    case "zona": n.zona=a.v; break;
+    case "hora": n.hora=((n.hora+a.d)%24+24)%24; break;
+    case "horaSet": n.hora=a.v; break;
+    case "sens": n.clima.sensacao=Math.max(0,Math.min(50,n.clima.sensacao+a.d)); break;
+    case "sensSet": n.clima.sensacao=a.v; break;
+    case "chuva": n.clima.chuva=Math.max(0,+(n.clima.chuva+a.d).toFixed(1)); break;
+    case "chuvaSet": n.clima.chuva=a.v; break;
+    case "fator": n.fatores[a.g][a.c]=Math.max(0.1,+(n.fatores[a.g][a.c]+a.d).toFixed(2)); break;
+    case "reset": return estadoInicial();
+    case "cena": return Object.assign(estadoInicial(), {zona:a.zona,hora:a.hora,clima:{sensacao:a.sens,chuva:a.chuva}});
+  }
+  return n;
+}
+function estadoInicial(){
+  return {zona:"zona_sul", hora:15, clima:{sensacao:30, chuva:0}, fatores:JSON.parse(JSON.stringify(FATORES_INICIAIS))};
+}
+
+/* ===== PÁGINA (fina, descartável) ===== */
+let estado = estadoInicial(), anterior = estado, aba = 0, passos = {};
+const CEN = [
+ {nome:"Calor na tarde da Zona Sul", desc:"O caso do seu exemplo: sensação de 42 °C no meio da tarde. Esperado: gatilho calor, destaque em açaí/sorvete. Olhe também se bebidas geladas parecem concorrer.",
+  passos:[["Zona Sul, 42 °C, 16h",{t:"cena",zona:"zona_sul",hora:16,sens:42,chuva:0}],["Passar para o almoço (12h)",{t:"horaSet",v:12}],["Mesmo calor, de madrugada (2h)",{t:"horaSet",v:2}]]},
+ {nome:"Frio no jantar da Zona Norte", desc:"Sensação de 15 °C às 20h. Esperado: gatilho frio e destaque em sopas ou comfort food. Verifique quem vence e se a diferença parece plausível.",
+  passos:[["Zona Norte, 15 °C, 20h",{t:"cena",zona:"zona_norte",hora:20,sens:15,chuva:0}],["Cai para 11 °C",{t:"sensSet",v:11}],["Manhã seguinte (8h)",{t:"horaSet",v:8}]]},
+ {nome:"Calor e chuva ao mesmo tempo", desc:"Caso difícil: tarde quente e abafada com pancada de chuva. Os fatores se multiplicam. O resultado faz sentido ou a regra precisa de prioridade?",
+  passos:[["Barra, 39 °C, 17h, sem chuva",{t:"cena",zona:"barra",hora:17,sens:39,chuva:0}],["Começa a chover (4 mm/h)",{t:"chuvaSet",v:4}],["A chuva aperta (10 mm/h)",{t:"chuvaSet",v:10}]]},
+ {nome:"Dia normal: silêncio", desc:"Sensação de 27 °C, sem chuva. O sistema NÃO deve disparar nada. Depois encosta nos limiares para ver a fronteira (37 → 38 °C).",
+  passos:[["Centro, 27 °C, 13h",{t:"cena",zona:"centro",hora:13,sens:27,chuva:0}],["Sobe para 37 °C",{t:"sensSet",v:37}],["Sobe para 38 °C",{t:"sensSet",v:38}]]},
+ {nome:"Mesma temperatura, zonas diferentes", desc:"Sensação de 40 °C às 15h em duas zonas. A Zona Oeste é mais sensível ao calor do que a Barra. O destaque muda ou só o tamanho do ganho?",
+  passos:[["Barra, 40 °C, 15h",{t:"cena",zona:"barra",hora:15,sens:40,chuva:0}],["Mudar para Zona Oeste",{t:"zona",v:"oeste"}]]}
+];
+
+const fmt = (x,d=1)=>x.toFixed(d).replace(".",",");
+const $ = id => document.getElementById(id);
+function ch(a,b){ return a!==b ? " changed":""; }
+
+function dispatch(a){ anterior = estado; estado = reduzir(estado,a); render(); }
+
+function render(){
+  const r = simular(estado), ra = simular(anterior);
+  const st = $("status");
+  st.className = "status " + (r.gatilhos.length?"fire":"quiet");
+  st.textContent = r.gatilhos.length
+    ? `DISPARA campanha: ${r.gatilhos.join(" + ")} → destaque: ${NOME_CAT[r.destaque]}`
+    : "SILÊNCIO: nenhum gatilho, o sistema não faz nada.";
+  $("clima").innerHTML = `<b>Clima e contexto</b>
+    <div class="kv"><span>Zona</span><b class="${ch(estado.zona,anterior.zona).trim()}">${ZONAS[estado.zona].nome}</b></div>
+    <div class="kv"><span>Hora</span><b class="${ch(estado.hora,anterior.hora).trim()}">${String(estado.hora).padStart(2,"0")}h</b></div>
+    <div class="kv"><span>Sensação térmica</span><b class="${ch(estado.clima.sensacao,anterior.clima.sensacao).trim()}">${estado.clima.sensacao} °C</b></div>
+    <div class="kv"><span>Chuva</span><b class="${ch(estado.clima.chuva,anterior.clima.chuva).trim()}">${fmt(estado.clima.chuva)} mm/h</b></div>`;
+  $("resumo").innerHTML = `<b>O que o sistema concluiu</b>
+    <div class="kv"><span>Período</span><b class="${ch(r.periodo,ra.periodo).trim()}">${NOME_PER[r.periodo]}</b></div>
+    <div class="kv"><span>Gatilhos ativos</span><b class="${ch(r.gatilhos.join(),ra.gatilhos.join()).trim()}">${r.gatilhos.join(" + ")||"nenhum"}</b></div>
+    <div class="kv"><span>Sensibilidade da zona</span><b>×${fmt(ZONAS[estado.zona].k,1)}</b></div>
+    <div class="kv"><span>Categoria destacada</span><b class="${ch(r.destaque,ra.destaque).trim()}">${r.destaque?NOME_CAT[r.destaque]:"—"}</b></div>
+    <div class="small">Limiares: calor ≥ ${LIMIARES.calor} °C, frio ≤ ${LIMIARES.frio} °C, chuva ≥ ${LIMIARES.chuva} mm/h</div>`;
+  $("tabela").innerHTML = `<table><tr><th>Categoria</th><th>Base</th><th>Fator</th><th>Esperado</th><th>Ganho</th></tr>` +
+    r.linhas.map(l=>`<tr class="${l.cat===r.destaque?"win":""}"><td>${NOME_CAT[l.cat]}</td><td>${fmt(l.base,0)}</td><td>×${fmt(l.fator,2)}</td><td>${fmt(l.esperado)}</td><td>${l.ganho>=0?"+":""}${fmt(l.ganho)}</td></tr>`).join("") + `</table>`;
+
+  const zb = Object.keys(ZONAS).map(z=>`<button class="${estado.zona===z?"on":""}" onclick="dispatch({t:'zona',v:'${z}'})">${ZONAS[z].nome}</button>`).join("");
+  $("livre").innerHTML = `<div>${zb}</div>
+    <div>Hora: <button onclick="dispatch({t:'hora',d:-1})">−1h</button><button onclick="dispatch({t:'hora',d:1})">+1h</button><button onclick="dispatch({t:'hora',d:-4})">−4h</button><button onclick="dispatch({t:'hora',d:4})">+4h</button></div>
+    <div>Sensação térmica: <button onclick="dispatch({t:'sens',d:-5})">−5 °C</button><button onclick="dispatch({t:'sens',d:-1})">−1</button><button onclick="dispatch({t:'sens',d:1})">+1</button><button onclick="dispatch({t:'sens',d:5})">+5 °C</button></div>
+    <div>Chuva: <button onclick="dispatch({t:'chuva',d:-1})">−1 mm/h</button><button onclick="dispatch({t:'chuva',d:1})">+1 mm/h</button><button onclick="dispatch({t:'chuva',d:5})">+5 mm/h</button></div>
+    <div><button onclick="dispatch({t:'reset'})">Voltar ao início (zera também os fatores)</button></div>`;
+
+  $("fatores").innerHTML = `<table><tr><th>Gatilho</th>${CATS.map(c=>`<th>${NOME_CAT[c]}</th>`).join("")}</tr>` +
+    ["calor","frio","chuva"].map(g=>`<tr><td>${g}</td>${CATS.map(c=>{
+      const mudou = estado.fatores[g][c]!==FATORES_INICIAIS[g][c];
+      return `<td><button class="fbtn" onclick="dispatch({t:'fator',g:'${g}',c:'${c}',d:-0.1})">−</button><span class="${mudou?"changed":""}">${fmt(estado.fatores[g][c],1)}</span><button class="fbtn" onclick="dispatch({t:'fator',g:'${g}',c:'${c}',d:0.1})">+</button></td>`;}).join("")}</tr>`).join("") + `</table>`;
+
+  $("abas").innerHTML = CEN.map((c,i)=>`<button class="${i===aba?"on":""}" onclick="aba=${i};render()">${c.nome}</button>`).join("");
+  const c = CEN[aba]; const feitos = passos[aba]||0;
+  $("cenario").innerHTML = `<p>${c.desc}</p><div class="steps">` +
+    c.passos.map((p,i)=>`<button data-n="${i+1}" class="${i<feitos?"done":""}" onclick="passo(${i})">${p[0]}</button>`).join("") + `</div>
+    <p class="small">Clique em ordem. O passo 1 reinicia o cenário do mesmo jeito sempre.</p>`;
+}
+function passo(i){
+  const c = CEN[aba];
+  if (i===0) passos[aba]=0;
+  dispatch(c.passos[i][1]);
+  passos[aba] = Math.max(passos[aba]||0, i+1);
+  render();
+}
+render();
+</script>
+</body>
+</html>
