@@ -26,7 +26,7 @@ Demanda (simulada/calibrada) ┘                                         │
 3. **Modelo de demanda:** estima o *uplift* de pedidos por clima, cluster, horário e categoria (sopas e caldos no frio, açaí e bebidas no calor). Baseline simples comparado a gradient boosting.
 4. **Geração de campanha:** um LLM escreve a mensagem a partir do contexto, com saída estruturada em JSON.
 5. **Avaliação:** checagem por regras (sem promessa falsa, sem preço inventado, limite de tamanho, tom de voz) mais um LLM-as-judge. Mensagens reprovadas voltam para nova geração.
-6. **Orquestração e demo:** fluxo no n8n e painel em Streamlit, com API em FastAPI expondo o modelo.
+6. **Orquestração e demo:** fluxo no n8n e página web responsiva, com API em FastAPI.
 
 ## Sobre os dados
 
@@ -62,7 +62,7 @@ clima-demanda-campanha/
 
 ## Tecnologias
 
-Python · pandas · scikit-learn / LightGBM · LLM via API (Gemini ou Claude) · FastAPI · Streamlit · n8n · Open-Meteo
+Python · pandas · scikit-learn / LightGBM · LLM via API (Gemini ou Claude) · FastAPI · HTML/CSS/JS · n8n · Open-Meteo
 
 ## Como rodar
 
@@ -71,7 +71,7 @@ git clone <url-do-repositorio>
 cd clima-demanda-campanha
 pip install -r requirements.txt
 cp .env.example .env      # coloque sua chave de API do LLM
-streamlit run app/main.py
+uvicorn src.api.main:app --port 8000   # abra http://localhost:8000
 ```
 
 ## Roteiro
