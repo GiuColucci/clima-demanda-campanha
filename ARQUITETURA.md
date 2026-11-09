@@ -137,6 +137,22 @@ O primeiro painel foi feito em Streamlit e foi substituído: o visual ficava lim
 - Como a página funciona no celular?
 - O que a API faz quando o n8n chamar?
 
+## Etapa 5: orquestração com n8n (feita)
+
+**Arquivos:** `n8n/fluxo.json` (importável) e `n8n/README.md` (como rodar). O n8n usado é a versão **local e gratuita** (`npx n8n`); o n8n Cloud é pago após o período de teste.
+
+**Fluxo:** agendamento diário → lê zonas e limiares da API → busca a previsão (Open-Meteo) de cada zona → escolhe a hora mais crítica nas próximas 24 h → chama `POST /api/propostas` → resumo. Se nenhuma hora dispara gatilho, o fluxo termina em silêncio, sem gastar LLM.
+
+**Decisões e porquês**
+- *O n8n não tem regra de negócio:* limiares e zonas vêm da API (`config.yaml` continua sendo a única fonte), e o pipeline roda no Python. O n8n só orquestra.
+- *No máximo uma proposta por zona por dia:* limita o custo (≤ 5 chamadas de LLM por execução).
+- *Só propostas liberadas entram na fila:* o que o pipeline barra não chega a uma pessoa.
+- *`127.0.0.1` em vez de `localhost`:* o Node resolve `localhost` para IPv6 e o `uvicorn` escuta em IPv4. Foi o primeiro erro do teste.
+
+**Perguntas de entrevista**
+- Por que o n8n e não só um script agendado?
+- Onde fica a lógica de negócio e por quê?
+- O que acontece num dia sem gatilho? E quanto custa uma execução no pior caso?
+
 ## Próximas etapas
-4. n8n (ou fallback)
-5. README, vídeo, medição de tempo
+6. README, vídeo, medição de tempo

@@ -1,0 +1,267 @@
+{
+  "name": "Clima → Campanha",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "fa36f0e1-9ac6-4bdb-bd3c-63e3d4139b9e",
+      "name": "Rodar agora (manual)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "id": "c5eb01e5-f9b5-410e-8d45-01a7f7bcb58d",
+      "name": "Todo dia às 7h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "444ac58c-ae8a-465f-9da9-3141fd57f452",
+              "name": "api",
+              "value": "http://127.0.0.1:8000",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0a9c0dce-da06-4cb0-9810-e56ba565883b",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.api }}/api/zonas",
+        "options": {}
+      },
+      "id": "0eec684c-ac82-4f3a-aee4-f6964b16ac8d",
+      "name": "Ler zonas e limiares",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const api = $('Config').first().json.api;\nconst dados = $input.first().json;\nreturn dados.zonas.map(z => ({ json: { ...z, gatilhos: dados.gatilhos, api } }));"
+      },
+      "id": "9722b7eb-2b98-42ff-a776-223b9f823e0c",
+      "name": "Montar zonas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.open-meteo.com/v1/forecast",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "latitude",
+              "value": "={{ $json.lat }}"
+            },
+            {
+              "name": "longitude",
+              "value": "={{ $json.lon }}"
+            },
+            {
+              "name": "hourly",
+              "value": "apparent_temperature,precipitation"
+            },
+            {
+              "name": "timezone",
+              "value": "America/Sao_Paulo"
+            },
+            {
+              "name": "forecast_days",
+              "value": "2"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2bc28b4e-0da8-458d-90c9-9320d6abca92",
+      "name": "Previsão do tempo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Para cada zona, olha as próximas 24 h da previsão e escolhe a hora mais crítica que dispara algum gatilho.\n// Se nenhuma hora dispara, a zona não gera nada (dia normal = silêncio).\nconst zonas = $('Montar zonas').all();\nconst s = new Date().toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' });\nconst agora = `${s.slice(0, 10)}T${s.slice(11, 13)}:00`;\nconst saida = [];\n$input.all().forEach((item, i) => {\n  const z = zonas[i].json, g = z.gatilhos, h = item.json.hourly;\n  let melhor = null;\n  h.time.forEach((t, k) => {\n    if (t < agora || k >= h.time.findIndex(x => x >= agora) + 24) return;\n    const sens = h.apparent_temperature[k], chuva = h.precipitation[k];\n    const score = Math.max(sens - g.calor_sensacao_min, g.frio_sensacao_max - sens, chuva - g.chuva_mm_h_min);\n    if (score >= 0 && (!melhor || score > melhor.score)) {\n      melhor = { score, zona: z.id, hora: parseInt(t.slice(11, 13), 10), sensacao: sens, chuva_mm_h: chuva, api: z.api };\n    }\n  });\n  if (melhor) saida.push({ json: melhor });\n});\nreturn saida;"
+      },
+      "id": "f41b0dc0-7837-4a09-b730-31b69fc1ac84",
+      "name": "Achar a hora crítica",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.api }}/api/propostas",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ zona: $json.zona, hora: $json.hora, sensacao: $json.sensacao, chuva_mm_h: $json.chuva_mm_h }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "1ef723ec-95cd-4d15-8613-fa10a716c70b",
+      "name": "Gerar proposta (LLM)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const itens = $input.all().map(i => i.json);\nconst liberadas = itens.filter(i => i.liberada);\nreturn [{ json: {\n  propostas_geradas: itens.length,\n  liberadas_para_aprovacao: liberadas.length,\n  custo_total_usd: Number(itens.reduce((a, i) => a + (i.custo_usd || 0), 0).toFixed(4)),\n  pushes: liberadas.map(i => i.push.titulo),\n} }];"
+      },
+      "id": "93750863-3618-4362-ac22-61a681b2c19f",
+      "name": "Resumo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        100
+      ]
+    }
+  ],
+  "connections": {
+    "Rodar agora (manual)": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Todo dia às 7h": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Ler zonas e limiares",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ler zonas e limiares": {
+      "main": [
+        [
+          {
+            "node": "Montar zonas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar zonas": {
+      "main": [
+        [
+          {
+            "node": "Previsão do tempo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Previsão do tempo": {
+      "main": [
+        [
+          {
+            "node": "Achar a hora crítica",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Achar a hora crítica": {
+      "main": [
+        [
+          {
+            "node": "Gerar proposta (LLM)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gerar proposta (LLM)": {
+      "main": [
+        [
+          {
+            "node": "Resumo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
