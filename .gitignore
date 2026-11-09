@@ -1,0 +1,13 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+.claude/
+# dados regeneráveis (python -m src.clima.coleta e python -m src.demanda.simulacao)
+dados/clima.csv
+dados/demanda.csv
+# estado local
+dados/gasto_llm.json
+dados/envios.jsonl
+dados/teste.jsonl
+dados/tempo_manual.json
