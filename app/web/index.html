@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clima → Campanha</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --red:#EA1D2C; --red-d:#C8101E; --ink:#3F3E3E; --mut:#717171; --line:#E6E6E6;
+  --bg:#F7F7F7; --card:#fff; --green:#50A773; --green-d:#3C8A5A;
+  --calor:#F29100; --frio:#2B6CB0; --chuva:#5F7285;
+  --r:14px;
+}
+* { box-sizing:border-box; margin:0; }
+html { -webkit-text-size-adjust:100%; }
+body { font:16px/1.5 'Plus Jakarta Sans',system-ui,sans-serif; color:var(--ink); background:var(--bg); }
+[hidden] { display:none !important; }
+button { font:inherit; color:inherit; cursor:pointer; }
+:focus-visible { outline:3px solid var(--red); outline-offset:2px; border-radius:6px; }
+
+/* ---------- topo ---------- */
+.topo { background:#fff; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:20; }
+.topo-in { max-width:1180px; margin:0 auto; padding:14px 20px 0; display:flex; flex-wrap:wrap; align-items:center; gap:4px 24px; }
+.marca { font-weight:800; font-size:21px; letter-spacing:-.02em; display:flex; align-items:center; gap:10px; }
+.marca i { width:12px; height:12px; border-radius:50%; background:var(--red); display:inline-block; }
+.sub { color:var(--mut); font-size:14px; flex:1 1 220px; }
+.abas { display:flex; gap:4px; width:100%; margin-top:6px; }
+.aba { border:0; background:none; padding:10px 14px; font-weight:600; color:var(--mut); border-bottom:3px solid transparent; }
+.aba[aria-selected="true"] { color:var(--red); border-bottom-color:var(--red); }
+
+main { max-width:1180px; margin:0 auto; padding:20px; }
+.rodape { max-width:1180px; margin:0 auto; padding:8px 20px 40px; color:var(--mut); font-size:13px; }
+
+/* ---------- fila + detalhe ---------- */
+.painel { display:grid; grid-template-columns:minmax(300px,380px) 1fr; gap:24px; align-items:start; }
+.fila-topo { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px; }
+.fila-topo h2 { font-size:17px; font-weight:700; }
+.fila-topo span { color:var(--mut); font-size:14px; }
+.filtros { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+.chip { border:1px solid var(--line); background:#fff; border-radius:99px; padding:6px 14px; font-size:14px; font-weight:600; }
+.chip[aria-pressed="true"] { background:var(--ink); border-color:var(--ink); color:#fff; }
+.lista { display:flex; flex-direction:column; gap:8px; }
+.item { display:grid; grid-template-columns:6px 1fr auto; align-items:center; gap:12px; text-align:left; width:100%;
+  background:#fff; border:1px solid var(--line); border-radius:var(--r); padding:0; overflow:hidden; }
+.item .barra { align-self:stretch; background:var(--cor); }
+.item .txt { padding:11px 0; min-width:0; }
+.item b { display:block; font-size:15px; }
+.item small { display:block; color:var(--mut); font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.item .est { padding-right:14px; font-size:18px; }
+.item[aria-current="true"] { border-color:var(--red); box-shadow:0 0 0 2px rgba(234,29,44,.18); }
+.item:hover { border-color:#cfcfcf; }
+
+.detalhe { min-width:0; }
+.voltar { display:none; border:0; background:none; color:var(--red); font-weight:700; padding:4px 0 12px; }
+.faixa { border-radius:var(--r); padding:18px 20px; background:var(--cor); color:#fff; }
+.faixa .meta { font-size:14px; font-weight:500; opacity:.92; }
+.faixa h2 { font-size:clamp(22px,3.2vw,30px); line-height:1.2; font-weight:800; letter-spacing:-.02em; margin-top:4px; }
+.grade { display:grid; grid-template-columns:1fr minmax(260px,330px); gap:24px; margin-top:20px; align-items:start; }
+.bloco { background:#fff; border:1px solid var(--line); border-radius:var(--r); padding:16px 18px; margin-bottom:16px; }
+.bloco h3 { font-size:15px; font-weight:700; margin-bottom:8px; }
+.fato { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid var(--line); font-size:15px; }
+.fato:last-child { border-bottom:0; }
+.fato b { text-align:right; }
+.nota { display:grid; grid-template-columns:90px 1fr 38px; align-items:center; gap:10px; margin:8px 0; font-size:15px; }
+.nota .t { height:8px; background:var(--line); border-radius:99px; overflow:hidden; }
+.nota .t i { display:block; height:100%; background:var(--green); }
+.motivo { color:var(--mut); font-size:14px; margin-top:6px; }
+.tec { color:var(--mut); font-size:13.5px; margin-top:10px; }
+details summary { cursor:pointer; font-weight:600; font-size:14.5px; }
+details .rep { padding:10px 0; border-bottom:1px solid var(--line); font-size:14.5px; }
+details .rep:last-child { border-bottom:0; }
+details .rep em { color:var(--red-d); font-style:normal; font-size:13.5px; display:block; margin-top:2px; }
+
+/* celular */
+.celular { background:#fff; border-radius:30px; border:1px solid var(--line); padding:20px 16px 24px; box-shadow:0 18px 40px -22px rgba(0,0,0,.4); position:sticky; top:130px; }
+.celular .hora { text-align:center; font-size:34px; font-weight:300; letter-spacing:-.02em; margin-bottom:2px; }
+.celular .dia { text-align:center; color:var(--mut); font-size:13px; margin-bottom:18px; }
+.push { background:#F2F2F2; border-radius:18px; padding:13px 15px 14px; border-left:6px solid var(--cor); }
+.push .app { font-size:12px; color:var(--mut); margin-bottom:4px; }
+.push .t { font-weight:700; font-size:16px; line-height:1.25; margin-bottom:3px; }
+.push .c { font-size:14.5px; line-height:1.4; }
+.push .cupom { display:inline-block; margin-top:9px; font-size:12.5px; font-weight:700; padding:3px 10px; border:1.5px dashed var(--cor); border-radius:99px; color:var(--cor); }
+
+.acoes { display:flex; gap:12px; margin-top:4px; }
+.btn { border-radius:12px; padding:13px 22px; font-weight:700; border:2px solid var(--line); background:#fff; min-height:48px; }
+.btn.ok { background:var(--green); border-color:var(--green); color:#fff; }
+.btn.ok:hover { background:var(--green-d); }
+.btn.no { color:var(--red); border-color:var(--red); }
+.btn.no:hover { background:#FDECEE; }
+.resultado { font-weight:700; padding:12px 0; }
+.resultado.ok { color:var(--green-d); } .resultado.no { color:var(--red-d); }
+
+/* ---------- resultados ---------- */
+.kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+.kpi { background:#fff; border:1px solid var(--line); border-radius:var(--r); padding:16px 18px; }
+.kpi .n { font-size:clamp(26px,4vw,34px); font-weight:800; letter-spacing:-.02em; line-height:1.1; }
+.kpi .l { color:var(--mut); font-size:14px; margin-top:4px; }
+.sec { margin-top:28px; }
+.sec h2 { font-size:20px; font-weight:800; letter-spacing:-.01em; margin-bottom:6px; }
+.sec p { color:var(--mut); font-size:15px; max-width:68ch; margin-bottom:12px; }
+.campos { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; max-width:560px; }
+.campos label { font-size:13.5px; font-weight:600; display:block; }
+.campos input { width:100%; margin-top:4px; padding:11px 12px; border:1px solid #cfcfcf; border-radius:10px; font:inherit; background:#fff; }
+.res { margin-top:14px; background:#fff; border:1px solid var(--line); border-radius:var(--r); padding:14px 18px; font-size:15.5px; }
+.res b { color:var(--red-d); }
+table { width:100%; max-width:640px; border-collapse:collapse; background:#fff; border:1px solid var(--line); border-radius:var(--r); overflow:hidden; }
+th,td { padding:11px 14px; text-align:left; border-bottom:1px solid var(--line); font-size:15px; }
+th { color:var(--mut); font-weight:600; font-size:13.5px; }
+td.num { text-align:right; font-variant-numeric:tabular-nums; font-weight:700; }
+tr:last-child td { border-bottom:0; }
+.aviso { color:var(--mut); font-size:13.5px; margin-top:8px; max-width:68ch; }
+
+/* ---------- celular (tela pequena): fila e detalhe viram telas ---------- */
+@media (max-width:900px) {
+  .painel { grid-template-columns:1fr; }
+  .grade { grid-template-columns:1fr; }
+  .celular { position:static; max-width:340px; margin:0 auto; order:-1; }
+  .kpis { grid-template-columns:repeat(2,1fr); }
+  .campos { grid-template-columns:1fr; }
+  body[data-tela="detalhe"] .fila { display:none; }
+  body[data-tela="fila"] .detalhe { display:none; }
+  .voltar { display:block; }
+  .barra-fixa { position:fixed; left:0; right:0; bottom:0; background:#fff; border-top:1px solid var(--line); padding:10px 16px calc(10px + env(safe-area-inset-bottom)); z-index:30; }
+  .barra-fixa .acoes { margin:0; }
+  .barra-fixa .btn { flex:1; }
+  .detalhe { padding-bottom:90px; }
+  main { padding:14px 14px 20px; }
+  .topo-in { padding:12px 14px 0; }
+}
+@media (prefers-reduced-motion:no-preference) { .item,.btn,.chip { transition:border-color .15s, background .15s, box-shadow .15s; } }
+.vazio { color:var(--mut); padding:30px 0; }
+</style>
+</head>
+<body data-tela="fila">
+<header class="topo"><div class="topo-in">
+  <div class="marca"><i aria-hidden="true"></i>Clima → Campanha</div>
+  <div class="sub">Rio de Janeiro · clima real, demanda simulada</div>
+  <div class="abas" role="tablist">
+    <button class="aba" role="tab" id="aba-campanhas" aria-selected="true">Campanhas</button>
+    <button class="aba" role="tab" id="aba-resultados" aria-selected="false">Resultados</button>
+  </div>
+</div></header>
+
+<main>
+  <section id="tela-campanhas" class="painel">
+    <div class="fila">
+      <div class="fila-topo"><h2>Para aprovar</h2><span id="contagem"></span></div>
+      <div class="filtros" id="filtros"></div>
+      <div class="lista" id="lista"></div>
+    </div>
+    <div class="detalhe" id="detalhe"></div>
+  </section>
+  <section id="tela-resultados" hidden></section>
+</main>
+<div class="rodape">Projeto de portfólio independente, sem vínculo com o iFood. Os números de demanda são simulados.</div>
+
+<script>
+const ROT = {calor:"Calor forte", frio:"Frio", chuva:"Chuva"};
+const COR = {calor:"var(--calor)", frio:"var(--frio)", chuva:"var(--chuva)"};
+const PERIODO = {manha:"manhã", almoco:"almoço", tarde:"tarde", jantar:"jantar", madrugada:"madrugada"};
+const $ = (s, r=document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const nomeCurto = c => c.nome_zona.split(" (")[0];
+const h2 = n => String(n).padStart(2,"0");
+
+let dados = [], sel = null, filtro = "todas", aba = "campanhas";
+
+async function carregar(){
+  dados = await (await fetch("/api/campanhas")).json();
+  if (!sel && dados.length) sel = dados[0].id;
+  render();
+}
+
+/* ---------- campanhas ---------- */
+function visiveis(){
+  return dados.filter(d => filtro === "todas" ? true :
+    filtro === "pendentes" ? !d.decisao : d.contexto.gatilhos.includes(filtro));
+}
+function render(){
+  const pend = dados.filter(d => !d.decisao).length;
+  $("#contagem").textContent = `${pend} de ${dados.length} pendentes`;
+  const fs = [["todas","Todas"],["pendentes","Pendentes"],["calor","Calor"],["frio","Frio"],["chuva","Chuva"]];
+  $("#filtros").innerHTML = fs.map(([k,r]) => `<button class="chip" aria-pressed="${filtro===k}" data-f="${k}">${r}</button>`).join("");
+  document.querySelectorAll("[data-f]").forEach(b => b.onclick = () => { filtro = b.dataset.f; render(); });
+
+  const lista = visiveis();
+  $("#lista").innerHTML = lista.length ? lista.map(d => {
+    const c = d.contexto, est = d.decisao === "aprovado" ? "✅" : d.decisao === "rejeitado" ? "⛔" : "";
+    return `<button class="item" style="--cor:${COR[c.gatilhos[0]]}" data-id="${d.id}" aria-current="${d.id===sel}">
+      <span class="barra"></span>
+      <span class="txt"><b>${esc(nomeCurto(c))} · ${h2(c.hora)}h</b><small>${c.gatilhos.map(g=>ROT[g]).join(" + ")} → ${esc(c.categoria_nome)}</small></span>
+      <span class="est" aria-label="${d.decisao||"pendente"}">${est}</span></button>`;
+  }).join("") : `<p class="vazio">Nenhuma campanha neste filtro.</p>`;
+  document.querySelectorAll(".item").forEach(b => b.onclick = () => { sel = b.dataset.id; document.body.dataset.tela = "detalhe"; render(); window.scrollTo(0,0); });
+
+  renderDetalhe();
+}
+
+function renderDetalhe(){
+  const box = $("#detalhe");
+  const d = dados.find(x => x.id === sel);
+  if (!d){ box.innerHTML = `<p class="vazio">Nenhuma campanha ainda. Gere com: python -m src.campanha.pipeline --n 30</p>`; return; }
+  const c = d.contexto, p = d.push_final, j = d.juiz, cor = COR[c.gatilhos[0]];
+  const nomes = c.gatilhos.map(g => ROT[g].toLowerCase()).join(" e ");
+  const titulo = `${nomes[0].toUpperCase()+nomes.slice(1)} em ${nomeCurto(c)}: destacar ${c.categoria_nome}`;
+  const reprov = d.tentativas.slice(0,-1).map(t => {
+    const mot = t.falhas_regras.length ? t.falhas_regras.join("; ") : (t.juiz ? t.juiz.motivo : "reprovada");
+    return `<div class="rep"><b>${esc(t.push.titulo)}</b><br>${esc(t.push.corpo)}<em>Reprovada: ${esc(mot)}</em></div>`;
+  }).join("");
+  const notas = j ? [["Tom", j.nota_tom], ["Adequação", j.nota_adequacao]].map(([n,v]) =>
+    `<div class="nota"><span>${n}</span><div class="t"><i style="width:${v*20}%"></i></div><b>${v}/5</b></div>`).join("") + `<p class="motivo">${esc(j.motivo)}</p>` : "";
+  const acoes = d.decisao
+    ? `<p class="resultado ${d.decisao==="aprovado"?"ok":"no"}">${d.decisao==="aprovado" ? "Aprovada. Envio simulado registrado." : "Rejeitada. Nada foi enviado."}</p>`
+    : `<div class="acoes"><button class="btn ok" data-d="aprovado">Aprovar envio</button><button class="btn no" data-d="rejeitado">Rejeitar</button></div>`;
+
+  box.innerHTML = `
+    <button class="voltar" id="voltar">← Voltar para a lista</button>
+    <div class="faixa" style="--cor:${cor}">
+      <div class="meta">${h2(c.hora)}h · ${PERIODO[c.periodo]} · sensação ${Math.round(c.sensacao)} °C · chuva ${c.chuva_mm_h.toFixed(1)} mm/h</div>
+      <h2>${esc(titulo)}</h2></div>
+    <div class="grade">
+      <div>
+        <div class="bloco"><h3>Por que essa campanha</h3>
+          <div class="fato"><span>Gatilho</span><b>${c.gatilhos.map(g=>ROT[g]).join(" + ")}</b></div>
+          <div class="fato"><span>Categoria destacada</span><b>${esc(c.categoria_nome)}</b></div>
+          <div class="fato"><span>Ganho estimado</span><b>+${Math.round(c.ganho_estimado)} pedidos/h (premissa)</b></div></div>
+        <div class="bloco"><h3>Avaliação</h3>${notas}
+          <p class="tec">Regras: passou · ${d.n_tentativas} tentativa(s) · ${Math.round(d.tempo_total_s)} s · US$ ${d.custo_usd.toFixed(4)}</p></div>
+        ${reprov ? `<div class="bloco"><details><summary>Ver versões reprovadas (${d.n_tentativas-1})</summary>${reprov}</details></div>` : ""}
+        <div class="acoes-desktop">${acoes}</div>
+      </div>
+      <div class="celular" style="--cor:${cor}">
+        <div class="hora">${h2(c.hora)}:00</div><div class="dia">Prévia da notificação</div>
+        <div class="push"><div class="app">App de delivery · agora</div>
+          <div class="t">${esc(p.titulo)}</div><div class="c">${esc(p.corpo)}</div>
+          ${p.cupom ? `<span class="cupom">Cupom ${esc(p.cupom)}</span>` : ""}</div></div>
+    </div>`;
+  $("#voltar").onclick = () => { document.body.dataset.tela = "fila"; };
+  document.querySelectorAll("[data-d]").forEach(b => b.onclick = () => decidir(d.id, b.dataset.d));
+  barraFixa(d, acoes);
+}
+
+/* No celular os botões ficam fixos no rodapé; no desktop ficam no fluxo da página. */
+function barraFixa(d, acoes){
+  let b = $("#barra-fixa");
+  if (!b){ b = document.createElement("div"); b.id = "barra-fixa"; b.className = "barra-fixa"; document.body.appendChild(b); }
+  const mobile = matchMedia("(max-width:900px)").matches && document.body.dataset.tela === "detalhe" && aba === "campanhas";
+  b.style.display = mobile ? "block" : "none";
+  b.innerHTML = acoes;
+  b.querySelectorAll("[data-d]").forEach(x => x.onclick = () => decidir(d.id, x.dataset.d));
+  document.querySelectorAll(".acoes-desktop").forEach(el => el.style.display = matchMedia("(max-width:900px)").matches ? "none" : "block");
+}
+matchMedia("(max-width:900px)").addEventListener("change", render);
+new MutationObserver(() => renderDetalhe()).observe(document.body, {attributes:true, attributeFilter:["data-tela"]});
+
+async function decidir(id, decisao){
+  await fetch(`/api/campanhas/${id}/decisao`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({decisao})});
+  await carregar();
+}
+
+/* ---------- resultados ---------- */
+async function renderResultados(){
+  const r = await (await fetch("/api/resultados")).json();
+  const m = r.modelo || {};
+  const man = r.tempo_manual_min;
+  const kp = (n,l) => `<div class="kpi"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+  $("#tela-resultados").innerHTML = `
+    <div class="kpis">
+      ${kp(Math.round(r.aprovadas_pct)+"%", `aprovadas pelo pipeline (n=${r.n})`)}
+      ${kp(r.tentativas_media.toFixed(2), "tentativas por campanha")}
+      ${kp(Math.round(r.tempo_medio_s)+" s", "tempo médio por campanha")}
+      ${kp("US$ "+r.custo_medio_usd.toFixed(4), "custo médio por campanha")}
+    </div>
+    <div class="sec"><h2>Tempo economizado</h2>
+      <p>Cronometre você mesma escrevendo 3 pushes do zero, sem IA, e informe os minutos de cada um. A página compara com o tempo do pipeline.</p>
+      <div class="campos">${[0,1,2].map(i => `<div><label for="m${i}">Push manual ${i+1} (min)</label><input id="m${i}" type="number" min="0" step="0.5" inputmode="decimal" value="${man[i]||""}"></div>`).join("")}</div>
+      <div class="res" id="res-tempo"></div></div>
+    <div class="sec"><h2>Modelo de uplift (teste em 2026)</h2>
+      <table><tr><th></th><th class="num">Erro médio geral</th><th class="num">Erro nas horas com gatilho</th></tr>
+      <tr><td>Sem clima (baseline)</td><td class="num">${m.baseline?.mae.toFixed(2)}</td><td class="num">${m.baseline?.mae_gatilho.toFixed(2)}</td></tr>
+      <tr><td>Com clima</td><td class="num">${m.modelo?.mae.toFixed(2)}</td><td class="num">${m.modelo?.mae_gatilho.toFixed(2)}</td></tr></table>
+      <p class="aviso">A demanda é sintética: o efeito do clima foi embutido por nós. O resultado mostra que o pipeline funciona, não o efeito real no iFood.</p></div>
+    <div class="sec"><h2>Teste do juiz</h2>
+      <p>Acertou <b>${r.juiz?.acertos}/${r.juiz?.total}</b> casos construídos de propósito, bons e ruins. Amostra pequena, casos fáceis.</p></div>`;
+  const calc = () => {
+    const v = [0,1,2].map(i => parseFloat($("#m"+i).value) || 0);
+    const med = v.reduce((a,b)=>a+b,0)/3, auto = r.tempo_medio_s/60;
+    $("#res-tempo").innerHTML = med > 0
+      ? `Manual: <b>${med.toFixed(1)} min</b> por push (n=3, medido por você). Pipeline: <b>${auto.toFixed(2)} min</b> por push (n=${r.n}).<br>Para 100 campanhas: <b>${(med*100/60).toFixed(1)} h</b> contra <b>${Math.round(auto*100)} min</b> (cálculo, não medição).`
+      : "Preencha os três tempos para ver a comparação.";
+    return v;
+  };
+  calc();
+  [0,1,2].forEach(i => $("#m"+i).oninput = async () => { const v = calc(); await fetch("/api/tempo", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({minutos:v})}); });
+}
+
+/* ---------- abas ---------- */
+function mostrarAba(a){
+  aba = a;
+  $("#aba-campanhas").setAttribute("aria-selected", a==="campanhas");
+  $("#aba-resultados").setAttribute("aria-selected", a==="resultados");
+  $("#tela-campanhas").hidden = a !== "campanhas";
+  $("#tela-resultados").hidden = a !== "resultados";
+  if (a === "resultados") renderResultados();
+  const b = $("#barra-fixa"); if (b && a === "resultados") b.style.display = "none";
+  if (a === "campanhas") render();
+}
+$("#aba-campanhas").onclick = () => mostrarAba("campanhas");
+$("#aba-resultados").onclick = () => mostrarAba("resultados");
+carregar();
+</script>
+</body>
+</html>

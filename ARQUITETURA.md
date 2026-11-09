@@ -110,17 +110,32 @@ O ganho aparece nas horas em que algum gatilho está ativo (erro cai ~51%). No g
 - O que acontece se o gerador sempre reprovar? (Depois de 2 regenerações a campanha fica `reprovado` e não é enviada.)
 - Como você limita o gasto?
 
-## Etapa 4: painel de aprovação (feita)
+## Etapa 4: front web e API (feita)
 
-**Rodar:** `streamlit run app/main.py` (tema claro fixado em `.streamlit/config.toml`).
+O primeiro painel foi feito em Streamlit e foi substituído: o visual ficava limitado ao que o Streamlit permite, e a tela não era responsiva. Agora há uma **API FastAPI** e uma **página HTML própria**.
 
-**O que existe** (`app/main.py`)
-- Aba **Campanhas para aprovar:** fila das campanhas disparadas pelo clima (cor = gatilho). Ao escolher uma, o painel mostra por que ela existe (gatilho, categoria, ganho estimado), as notas do juiz, as versões reprovadas antes da final e a prévia do push num celular. Os botões **Aprovar envio** e **Rejeitar** gravam a decisão em `dados/envios.jsonl`. O "envio" é só esse registro.
-- Aba **Resultados:** aprovação pelo pipeline, tentativas, tempo e custo médios, o erro do modelo de uplift, o teste do juiz e o campo **Tempo economizado**, onde você informa os minutos das 3 pushes escritas à mão e ele calcula a comparação.
+**Rodar:** `uvicorn src.api.main:app --port 8000` e abrir http://localhost:8000
 
-**Lote real (30 campanhas):** 30/30 aprovadas pelo pipeline, 1,10 tentativa por campanha, ~10 s e ~US$ 0,0033 cada. Gasto acumulado em LLM: ~US$ 0,14.
-**Ressalva:** aprovação de 100% com juiz que também deu 9/9 no teste é um bom sinal, mas é preciso explicar que as campanhas são fáceis (gatilhos claros) e que a aprovação final é humana.
-**Bug corrigido:** o gerador (Haiku) também gastava tokens "pensando" e uma resposta saiu cortada. Limite subiu para 2000, e o lote agora registra o erro e continua em vez de parar.
+**API** (`src/api/main.py`)
+- `GET /api/campanhas`: lista as campanhas, com a decisão humana de cada uma.
+- `POST /api/campanhas/{id}/decisao`: registra aprovar ou rejeitar em `dados/envios.jsonl` (o envio é só esse registro).
+- `GET /api/resultados` e `POST /api/tempo`: números do pipeline e a medição de tempo manual.
+- É a mesma API que o n8n vai chamar na etapa seguinte.
+
+**Página** (`app/web/index.html`, um arquivo só, sem framework)
+- Cores inspiradas no iFood (vermelho `#EA1D2C`, grafite, verde de aprovação), sem logo, e um aviso de projeto independente no rodapé.
+- Desktop: fila à esquerda e detalhe à direita, com a prévia do push num celular.
+- Celular (até 900 px): a fila vira uma tela, o detalhe abre por cima com "Voltar", e Aprovar/Rejeitar ficam fixos no rodapé.
+- Aba **Resultados**: métricas do pipeline, modelo de uplift, teste do juiz e o campo de **tempo economizado**.
+
+**Lote real (30 campanhas):** 30/30 aprovadas pelo pipeline, 1,10 tentativa por campanha, ~10 s e ~US$ 0,0033 cada.
+**Ressalva:** 100% de aprovação com um juiz que acertou 9/9 em casos fáceis é um bom sinal, mas a aprovação final é humana.
+**Bug corrigido:** o gerador (Haiku) também gastava tokens "pensando" e uma resposta saiu cortada. Limite subiu para 2000, e o lote registra o erro e continua.
+
+**Perguntas de entrevista**
+- Por que trocar o Streamlit por uma API + página própria?
+- Como a página funciona no celular?
+- O que a API faz quando o n8n chamar?
 
 ## Próximas etapas
 4. n8n (ou fallback)
