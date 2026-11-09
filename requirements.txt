@@ -1,0 +1,9 @@
+requests
+pyyaml
+pandas
+numpy
+scikit-learn
+streamlit
+fastapi
+uvicorn
+python-dotenv

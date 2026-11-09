@@ -1,0 +1,110 @@
+[
+  {
+    "caso": "bom 1",
+    "deveria_aprovar": true,
+    "veredito": {
+      "nota_tom": 5,
+      "nota_adequacao": 5,
+      "alucinacao": false,
+      "motivo": "Notificação extremamente natural, muito bem contextualizada com a temperatura e perfeita para o horário da tarde.",
+      "aprovado": true
+    },
+    "acertou": true
+  },
+  {
+    "caso": "bom 2",
+    "deveria_aprovar": true,
+    "veredito": {
+      "nota_tom": 5,
+      "nota_adequacao": 5,
+      "alucinacao": false,
+      "motivo": "Texto muito natural, bem adequado ao calor de 42 °C e dentro das regras de desconto.",
+      "aprovado": true
+    },
+    "acertou": true
+  },
+  {
+    "caso": "tom robótico",
+    "deveria_aprovar": false,
+    "veredito": {
+      "nota_tom": 1,
+      "nota_adequacao": 1,
+      "alucinacao": true,
+      "motivo": "O tom é extremamente burocrático e robótico, ignorando o calor de 42 °C e prometendo uma promoção inexistente no contexto.",
+      "aprovado": false
+    },
+    "acertou": true
+  },
+  {
+    "caso": "exagerado",
+    "deveria_aprovar": false,
+    "veredito": {
+      "nota_tom": 1,
+      "nota_adequacao": 2,
+      "alucinacao": true,
+      "motivo": "Uso excessivo de caixa alta e pontuação com tom apelativo, além de inventar uma mega oferta e prazo de urgência sem respaldo no contexto.",
+      "aprovado": false
+    },
+    "acertou": true
+  },
+  {
+    "caso": "desconto inventado",
+    "deveria_aprovar": false,
+    "veredito": {
+      "nota_tom": 3,
+      "nota_adequacao": 3,
+      "alucinacao": true,
+      "motivo": "Inventou uma promoção de 40% OFF que não consta no contexto e ignorou o gatilho do calor de 42 °C.",
+      "aprovado": false
+    },
+    "acertou": true
+  },
+  {
+    "caso": "promessa de prazo",
+    "deveria_aprovar": false,
+    "veredito": {
+      "nota_tom": 3,
+      "nota_adequacao": 2,
+      "alucinacao": true,
+      "motivo": "O texto promete entrega garantida em 10 minutos e gratuidade sem qualquer respaldo no contexto.",
+      "aprovado": false
+    },
+    "acertou": true
+  },
+  {
+    "caso": "ignora o clima",
+    "deveria_aprovar": false,
+    "veredito": {
+      "nota_tom": 4,
+      "nota_adequacao": 1,
+      "alucinacao": false,
+      "motivo": "Sugerir feijoada pesada às 16h sob calor de 42 °C ignora totalmente o clima e a categoria destacada de açaí e sorvete.",
+      "aprovado": false
+    },
+    "acertou": true
+  },
+  {
+    "caso": "categoria errada",
+    "deveria_aprovar": false,
+    "veredito": {
+      "nota_tom": 4,
+      "nota_adequacao": 1,
+      "alucinacao": false,
+      "motivo": "A mensagem sugere café quente em um dia de calor extremo de 42 °C, ignorando totalmente a categoria de açaí e sorvete.",
+      "aprovado": false
+    },
+    "acertou": true
+  },
+  {
+    "caso": "inglês",
+    "deveria_aprovar": false,
+    "veredito": {
+      "nota_tom": 1,
+      "nota_adequacao": 2,
+      "alucinacao": false,
+      "motivo": "A notificação está em inglês, sendo totalmente inadequada para o público do Brasil.",
+      "aprovado": false
+    },
+    "acertou": true
+  }
+]
